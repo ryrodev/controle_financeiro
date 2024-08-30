@@ -7,6 +7,13 @@ from datetime import datetime
 file_path = 'dados_financeiros.csv'
 log_path = 'log.txt'
 
+moedas = {
+    'BRL': 'R$',
+    'USD': '$',
+    'EUR': '€',
+    'JPY': '¥'
+}
+
 def log_message(message):
     with open(log_path, 'a') as log_file:
         log_file.write(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} - {message}\n")
@@ -130,13 +137,35 @@ def atualizar_treeview():
             tree.delete(item)
 
         for index, row in data.iterrows():
-            tree.insert('', 'end', values=(row['última alteração'], row['receita total'], row['gastos totais']))
+            tree.insert('', 'end', values=(row['última alteração'],
+                                            format_moeda(row['receita total']),
+                                            format_moeda(row['gastos totais'])))
+
+def format_moeda(valor):
+    if moeda_var.get() in moedas:
+        return f"{moedas[moeda_var.get()]} {valor:.2f}"
+    return f"{valor:.2f}"
+
+def moeda_change(event):
+    atualizar_treeview()
 
 def criar_interface():
-    global tree, valor_entry
+    global tree, valor_entry, moeda_var
 
     root = tk.Tk()
     root.title("Controle Financeiro")
+    root.geometry("650x500")
+    root.configure(bg='#f5f5f5')  # Cor de fundo do tema Breeze
+
+    # Aplicar tema padrão "clam"
+    style = ttk.Style(root)
+    style.theme_use('clam')
+    style.configure("Treeview",
+                    background="#f5f5f5",
+                    foreground="black",
+                    rowheight=25,
+                    fieldbackground="#ffffff")
+    style.configure("Treeview.Heading", font=("Arial", 10, "bold"))
 
     # Treeview para exibir dados financeiros
     tree = ttk.Treeview(root, columns=('última alteração', 'receita total', 'gastos totais'), show='headings')
@@ -145,12 +174,23 @@ def criar_interface():
     tree.heading('gastos totais', text='Gastos Totais')
     tree.pack(expand=True, fill='both', padx=10, pady=10)
 
-    # Frame para botões
-    button_frame = tk.Frame(root)
-    button_frame.pack(pady=10)
+    # Frame para a parte superior da interface
+    top_frame = tk.Frame(root, bg='#f5f5f5')
+    top_frame.pack(pady=10, fill='x', padx=10)
 
-    tk.Label(button_frame, text="Valor:").grid(row=0, column=0, padx=10)
-    valor_entry = tk.Entry(button_frame)
+    # Campo de moeda
+    tk.Label(top_frame, text="Moeda:", bg='#f5f5f5').pack(side='left', padx=10)
+    moeda_var = tk.StringVar(value='BRL')
+    moeda_combo = ttk.Combobox(top_frame, textvariable=moeda_var, values=list(moedas.keys()), state='readonly')
+    moeda_combo.pack(side='left', padx=10)
+    moeda_combo.bind('<<ComboboxSelected>>', moeda_change)  # Atualizar ao selecionar moeda
+
+    # Campo de valor e botões
+    valor_frame = tk.Frame(top_frame, bg='#f5f5f5')
+    valor_frame.pack(side='right', padx=10)
+
+    tk.Label(valor_frame, text="Valor:", bg='#f5f5f5').grid(row=0, column=0, padx=10)
+    valor_entry = ttk.Entry(valor_frame)
     valor_entry.grid(row=0, column=1, padx=10)
 
     def handle_depositar():
@@ -171,13 +211,14 @@ def criar_interface():
         mostrar_dados()
         atualizar_treeview()
 
-    tk.Button(button_frame, text="Depositar Receita", command=handle_depositar).grid(row=1, column=0, padx=10, pady=5)
-    tk.Button(button_frame, text="Pagar", command=handle_pagar).grid(row=1, column=1, padx=10, pady=5)
-    tk.Button(button_frame, text="Mostrar Dados", command=handle_mostrar_dados).grid(row=2, column=0, columnspan=2, padx=10, pady=5)
+    ttk.Button(valor_frame, text="Depositar Receita", command=handle_depositar).grid(row=1, column=0, padx=10, pady=5)
+    ttk.Button(valor_frame, text="Pagar", command=handle_pagar).grid(row=1, column=1, padx=10, pady=5)
+    ttk.Button(top_frame, text="Mostrar Dados", command=handle_mostrar_dados).pack(side='right', padx=10, pady=5)
 
     # Atualizar a árvore ao iniciar
     atualizar_treeview()
 
     root.mainloop()
 
-criar_interface()
+if __name__ == "__main__":
+    criar_interface()
