@@ -1,160 +1,88 @@
-import pandas as pd
-import os
 import tkinter as tk
 from tkinter import ttk, messagebox
-from datetime import datetime
+import pandas as pd
+import os
 
 file_path = 'dados_financeiros.csv'
-log_path = 'log.txt'
 
 moedas = {
     'BRL': 'R$',
     'USD': '$',
     'EUR': '€',
-    'JPY': '¥'
 }
 
-def log_message(message):
-    with open(log_path, 'a') as log_file:
-        log_file.write(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} - {message}\n")
+def garantir_arquivo_csv():
+    if not os.path.exists(file_path):
+        df = pd.DataFrame(columns=['última alteração', 'receita total', 'gastos totais'])
+        df.to_csv(file_path, index=False)
 
 def is_file_empty(file_path):
     return os.path.getsize(file_path) == 0
 
-def criar_arquivo_csv():
-    colunas = ['última alteração', 'receita total', 'gastos totais']
-    df = pd.DataFrame(columns=colunas)
-    df.to_csv(file_path, index=False)
-    log_message(f"Arquivo '{file_path}' criado com as colunas {colunas}.")
-    print(f"Arquivo '{file_path}' criado com as colunas {colunas}.")
-
-def garantir_arquivo_csv():
-    if not os.path.exists(file_path):
-        criar_arquivo_csv()
-
 def depositar_receita(valor):
     garantir_arquivo_csv()
     if not is_file_empty(file_path):
-        try:
-            data = pd.read_csv(file_path)
-            if data.empty:
-                data = pd.DataFrame({
-                    'última alteração': [datetime.now().strftime('%d/%m/%y %H:%M')],
-                    'receita total': [valor],
-                    'gastos totais': [0]
-                })
-            else:
-                receita_total_atual = data['receita total'].iloc[-1]
-                nova_receita_total = receita_total_atual + valor
-                data = pd.DataFrame({
-                    'última alteração': [datetime.now().strftime('%d/%m/%y %H:%M')],
-                    'receita total': [nova_receita_total],
-                    'gastos totais': [data['gastos totais'].iloc[-1]]
-                }, index=[0])
-            data.to_csv(file_path, index=False)
-            atualizar_treeview()
-            log_message(f"Receita de {valor} adicionada. Receita total atualizada com sucesso!")
-            messagebox.showinfo("Sucesso", f"Receita de {valor} adicionada. Receita total atualizada com sucesso!")
-        except pd.errors.EmptyDataError:
-            log_message("Erro: O arquivo CSV está vazio ou não contém dados válidos.")
-            messagebox.showerror("Erro", "O arquivo CSV está vazio ou não contém dados válidos.")
-        except Exception as e:
-            log_message(f"Erro ao ler o arquivo CSV: {e}")
-            messagebox.showerror("Erro", f"Erro ao ler o arquivo CSV: {e}")
+        data = pd.read_csv(file_path)
+        ultima_receita = data['receita total'].iloc[-1]
+        ultimo_gasto = data['gastos totais'].iloc[-1]
     else:
-        messagebox.showwarning("Aviso", "O arquivo CSV está vazio.")
+        ultima_receita = 0
+        ultimo_gasto = 0
+    nova_receita = ultima_receita + valor
+    novo_dado = pd.DataFrame({
+        'última alteração': [pd.Timestamp.now()],
+        'receita total': [nova_receita],
+        'gastos totais': [ultimo_gasto]
+    })
+    novo_dado.to_csv(file_path, mode='a', header=False, index=False)
+    atualizar_treeview()
 
 def pagar(valor):
     garantir_arquivo_csv()
     if not is_file_empty(file_path):
-        try:
-            data = pd.read_csv(file_path)
-            if data.empty:
-                log_message("Erro: O arquivo CSV está vazio ou não contém dados válidos.")
-                messagebox.showerror("Erro", "O arquivo CSV está vazio ou não contém dados válidos.")
-                return
-            receita_total_atual = data['receita total'].iloc[-1]
-            gastos_totais_atual = data['gastos totais'].iloc[-1]
-            if valor > receita_total_atual:
-                log_message("Erro: Valor de pagamento maior do que a receita total disponível.")
-                messagebox.showerror("Erro", "Valor de pagamento maior do que a receita total disponível.")
-                return
-            nova_receita_total = receita_total_atual - valor
-            novos_gastos_totais = gastos_totais_atual + valor
-            data = pd.DataFrame({
-                'última alteração': [datetime.now().strftime('%d/%m/%y %H:%M')],
-                'receita total': [nova_receita_total],
-                'gastos totais': [novos_gastos_totais]
-            }, index=[0])
-            data.to_csv(file_path, index=False)
-            atualizar_treeview()
-            log_message(f"Gasto de {valor} registrado. Receita total e gastos totais atualizados com sucesso!")
-            messagebox.showinfo("Sucesso", f"Gasto de {valor} registrado. Receita total e gastos totais atualizados com sucesso!")
-        except pd.errors.EmptyDataError:
-            log_message("Erro: O arquivo CSV está vazio ou não contém dados válidos.")
-            messagebox.showerror("Erro", "O arquivo CSV está vazio ou não contém dados válidos.")
-        except Exception as e:
-            log_message(f"Erro ao ler o arquivo CSV: {e}")
-            messagebox.showerror("Erro", f"Erro ao ler o arquivo CSV: {e}")
+        data = pd.read_csv(file_path)
+        ultima_receita = data['receita total'].iloc[-1]
+        ultimo_gasto = data['gastos totais'].iloc[-1]
     else:
-        messagebox.showwarning("Aviso", "O arquivo CSV está vazio.")
+        ultima_receita = 0
+        ultimo_gasto = 0
+    novo_gasto = ultimo_gasto + valor
+    nova_receita = ultima_receita - valor
+    novo_dado = pd.DataFrame({
+        'última alteração': [pd.Timestamp.now()],
+        'receita total': [nova_receita],
+        'gastos totais': [novo_gasto]
+    })
+    novo_dado.to_csv(file_path, mode='a', header=False, index=False)
+    atualizar_treeview()
 
 def mostrar_dados():
     garantir_arquivo_csv()
     if not is_file_empty(file_path):
-        try:
-            data = pd.read_csv(file_path)
-            if data.empty:
-                log_message("Erro: O arquivo CSV está vazio ou não contém dados válidos.")
-                messagebox.showerror("Erro", "O arquivo CSV está vazio ou não contém dados válidos.")
-                return
-            ultima_alteracao = data['última alteração'].iloc[-1]
-            receita_total = data['receita total'].iloc[-1]
-            gastos_totais = data['gastos totais'].iloc[-1]
-            log_message(f"Dados exibidos - Última alteração: {ultima_alteracao}, Receita total: {receita_total}, Gastos totais: {gastos_totais}")
-            messagebox.showinfo("Dados Financeiros",
-                                f"Última alteração: {ultima_alteracao}\n"
-                                f"Receita total atual: {receita_total}\n"
-                                f"Gastos totais: {gastos_totais}")
-        except pd.errors.EmptyDataError:
-            log_message("Erro: O arquivo CSV está vazio ou não contém dados válidos.")
-            messagebox.showerror("Erro", "O arquivo CSV está vazio ou não contém dados válidos.")
-        except Exception as e:
-            log_message(f"Erro ao ler o arquivo CSV: {e}")
-            messagebox.showerror("Erro", f"Erro ao ler o arquivo CSV: {e}")
-    else:
-        messagebox.showwarning("Aviso", "O arquivo CSV está vazio.")
+        data = pd.read_csv(file_path)
+        print(data)
 
 def atualizar_treeview():
     garantir_arquivo_csv()
     if not is_file_empty(file_path):
         data = pd.read_csv(file_path)
-        if data.empty:
-            return
-
-        # Limpar o Treeview antes de atualizar
-        for item in tree.get_children():
-            tree.delete(item)
-
-        for index, row in data.iterrows():
-            tree.insert('', 'end', values=(row['última alteração'],
-                                            format_moeda(row['receita total']),
-                                            format_moeda(row['gastos totais'])))
-
-def format_moeda(valor):
-    if moeda_var.get() in moedas:
-        return f"{moedas[moeda_var.get()]} {valor:.2f}"
-    return f"{valor:.2f}"
-
-def moeda_change(event):
-    atualizar_treeview()
+        tree.delete(*tree.get_children())
+        # Inverter a ordem dos dados para que a linha mais recente fique no topo
+        data = data.sort_values(by='última alteração', ascending=False)
+        for i, row in data.iterrows():
+            tree.insert("", "end", values=list(row))
+        # Adicionar cor na linha mais recente
+        if tree.get_children():
+            primeiro_item = tree.get_children()[0]
+            tree.item(primeiro_item, tags=('recent',))
+            tree.tag_configure('recent', background='#d9edf7', foreground='black')
 
 def criar_interface():
-    global tree, valor_entry, moeda_var
+    global tree, valor_entry, moeda_var, receita_valor_label, gastos_valor_label
 
     root = tk.Tk()
     root.title("Controle Financeiro")
-    root.geometry("650x500")
+    root.geometry("800x500")
     root.configure(bg='#f5f5f5')  # Cor de fundo do tema Breeze
 
     # Aplicar tema padrão "clam"
@@ -167,26 +95,52 @@ def criar_interface():
                     fieldbackground="#ffffff")
     style.configure("Treeview.Heading", font=("Arial", 10, "bold"))
 
+    # Frame superior para "Receita" e "Gastos"
+    top_info_frame = tk.Frame(root, bg='#f5f5f5')
+    top_info_frame.pack(pady=5, fill='x')
+
+    receita_label = tk.Label(top_info_frame, text="Receita", fg='green', bg='#f5f5f5', font=("Arial", 12, "bold"))
+    receita_label.pack(side='left', padx=(10, 5))
+
+    # Label para exibir o valor atual da receita
+    receita_valor_label = tk.Label(top_info_frame, text="", fg='green', bg='#f5f5f5', font=("Arial", 12))
+    receita_valor_label.pack(side='left', padx=(5, 20))
+
+    gastos_label = tk.Label(top_info_frame, text="Gastos", fg='red', bg='#f5f5f5', font=("Arial", 12, "bold"))
+    gastos_label.pack(side='left', padx=(10, 5))
+
+    # Label para exibir o valor atual dos gastos
+    gastos_valor_label = tk.Label(top_info_frame, text="", fg='red', bg='#f5f5f5', font=("Arial", 12))
+    gastos_valor_label.pack(side='left', padx=(5, 10))
+
     # Treeview para exibir dados financeiros
-    tree = ttk.Treeview(root, columns=('última alteração', 'receita total', 'gastos totais'), show='headings')
+    tree_frame = tk.Frame(root)
+    tree_frame.pack(expand=True, fill='both', padx=10, pady=10)
+
+    tree = ttk.Treeview(tree_frame, columns=('última alteração', 'receita total', 'gastos totais'), show='headings')
     tree.heading('última alteração', text='Última Alteração')
     tree.heading('receita total', text='Receita Total')
     tree.heading('gastos totais', text='Gastos Totais')
-    tree.pack(expand=True, fill='both', padx=10, pady=10)
 
-    # Frame para a parte superior da interface
-    top_frame = tk.Frame(root, bg='#f5f5f5')
-    top_frame.pack(pady=10, fill='x', padx=10)
+    # Ajuste no tamanho do Treeview
+    tree.column('última alteração', width=150)
+    tree.column('receita total', width=150)
+    tree.column('gastos totais', width=150)
+    tree.pack(expand=True, fill='both')
+
+    # Frame para a parte inferior da interface
+    bottom_frame = tk.Frame(root, bg='#f5f5f5')
+    bottom_frame.pack(pady=10, fill='x')
 
     # Campo de moeda
-    tk.Label(top_frame, text="Moeda:", bg='#f5f5f5').pack(side='left', padx=10)
+    tk.Label(bottom_frame, text="Moeda:", bg='#f5f5f5').pack(side='left', padx=10)
     moeda_var = tk.StringVar(value='BRL')
-    moeda_combo = ttk.Combobox(top_frame, textvariable=moeda_var, values=list(moedas.keys()), state='readonly')
+    moeda_combo = ttk.Combobox(bottom_frame, textvariable=moeda_var, values=list(moedas.keys()), state='readonly')
     moeda_combo.pack(side='left', padx=10)
     moeda_combo.bind('<<ComboboxSelected>>', moeda_change)  # Atualizar ao selecionar moeda
 
     # Campo de valor e botões
-    valor_frame = tk.Frame(top_frame, bg='#f5f5f5')
+    valor_frame = tk.Frame(bottom_frame, bg='#f5f5f5')
     valor_frame.pack(side='right', padx=10)
 
     tk.Label(valor_frame, text="Valor:", bg='#f5f5f5').grid(row=0, column=0, padx=10)
@@ -197,6 +151,7 @@ def criar_interface():
         try:
             valor = float(valor_entry.get())
             depositar_receita(valor)
+            atualizar_info_labels()
         except ValueError:
             messagebox.showerror("Erro", "Por favor, insira um valor numérico válido.")
 
@@ -204,21 +159,41 @@ def criar_interface():
         try:
             valor = float(valor_entry.get())
             pagar(valor)
+            atualizar_info_labels()
         except ValueError:
             messagebox.showerror("Erro", "Por favor, insira um valor numérico válido.")
 
     def handle_mostrar_dados():
         mostrar_dados()
         atualizar_treeview()
+        atualizar_info_labels()
 
-    ttk.Button(valor_frame, text="Depositar Receita", command=handle_depositar).grid(row=1, column=0, padx=10, pady=5)
-    ttk.Button(valor_frame, text="Pagar", command=handle_pagar).grid(row=1, column=1, padx=10, pady=5)
-    ttk.Button(top_frame, text="Mostrar Dados", command=handle_mostrar_dados).pack(side='right', padx=10, pady=5)
+    # Botões centralizados
+    buttons_frame = tk.Frame(bottom_frame, bg='#f5f5f5')
+    buttons_frame.pack(side='bottom', pady=5)
 
-    # Atualizar a árvore ao iniciar
+    ttk.Button(buttons_frame, text="Depositar Receita", command=handle_depositar).grid(row=0, column=0, padx=10, pady=5)
+    ttk.Button(buttons_frame, text="Pagar", command=handle_pagar).grid(row=0, column=1, padx=10, pady=5)
+    ttk.Button(buttons_frame, text="Mostrar Dados", command=handle_mostrar_dados).grid(row=0, column=2, padx=10, pady=5)
+
+    # Atualizar a árvore e labels ao iniciar
     atualizar_treeview()
+    atualizar_info_labels()
 
     root.mainloop()
+
+def atualizar_info_labels():
+    garantir_arquivo_csv()
+    if not is_file_empty(file_path):
+        data = pd.read_csv(file_path)
+        if not data.empty:
+            receita_atual = data['receita total'].iloc[-1]
+            gastos_atuais = data['gastos totais'].iloc[-1]
+            receita_valor_label.config(text=f"{moedas[moeda_var.get()]} {receita_atual:.2f}")
+            gastos_valor_label.config(text=f"{moedas[moeda_var.get()]} {gastos_atuais:.2f}")
+
+def moeda_change(event):
+    atualizar_info_labels()
 
 if __name__ == "__main__":
     criar_interface()
