@@ -21,7 +21,9 @@
 <p align="left">Como executar o programa:</p>
 
 ###
+``` git clone https://github.com/ryrodev/controle_financeiro.git ```
 
 ``` pip install pandas tk ```
 
+``` py main.py```
 ###
