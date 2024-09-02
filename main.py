@@ -54,6 +54,7 @@ def depositar_receita(valor, descricao):
         'Descrição': [descricao]
     })
     novo_dado.to_csv(file_path, mode='a', header=False, index=False)
+    tree.insert("", 0, values=list(novo_dado.iloc[0]))
     atualizar_treeview()
 
 
@@ -76,6 +77,7 @@ def pagar(valor, descricao):
         'Descrição': [descricao]
     })
     novo_dado.to_csv(file_path, mode='a', header=False, index=False)
+    tree.insert("", 0, values=list(novo_dado.iloc[0]))
     atualizar_treeview()
 
 
@@ -83,7 +85,7 @@ def atualizar_treeview():
     garantir_arquivo_csv()
     if not is_file_empty(file_path):
         data = pd.read_csv(file_path)
-        data = data.sort_values(by='última alteração', ascending=False)
+        data = data.iloc[::-1]
         tree.delete(*tree.get_children())
         for i, row in data.iterrows():
             tree.insert("", "end", values=list(row))
@@ -214,3 +216,4 @@ def moeda_change(event):
 
 if __name__ == "__main__":
     criar_interface()
+
