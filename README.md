@@ -25,5 +25,5 @@
 
 ``` pip install pandas tk ```
 
-``` py main.py```
+``` py main.py ```
 ###
